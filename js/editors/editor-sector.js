@@ -201,13 +201,14 @@ var App = App || {};
         }
     }
 
-    function Sector() {
+    function Sector(a) {
         var self = this;
         this.placeFrom = -1;
         this.placeTo = -1;
         this.name = null;
         this.cols = 0;
         this.rows = [];
+        this.area = a;
         this.jq = this.init(this);
     }
 
@@ -239,7 +240,11 @@ var App = App || {};
             this.draggable = r;
         },
         updateDraggable: function () {
-            this.draggable.html(this._getDraggable());
+            var html = this._getDraggable();
+            if (!this.area.isSectorNameVisible) {
+                html.find('.sector-title').hide();
+            }
+            this.draggable.html(html);
         },
         _getDraggable: function () {
             var rez = $('<table>').attr('title', this.name);
@@ -434,7 +439,7 @@ var App = App || {};
         init: function (place) {
             place.hide();
 
-            var sector = new Sector();
+            var sector = new Sector(null);
 
             this.sector = sector;
 
@@ -509,8 +514,9 @@ var App = App || {};
         var self = this;
         this.name = a.name;
         this.sectors = [];
+        this.isSectorTtitleVisible = true;
         a.sectors.forEach(function (s) {
-            var sector = new Sector();
+            var sector = new Sector(this);
             sector.set(s);
             self.sectors.push(sector);
         });
@@ -549,6 +555,7 @@ var App = App || {};
                 $('#rez').text(Editor.json());
             });
             place.find('#show-sector-title').on('change', function (e) {
+                Editor.area.isSectorTtitleVisible = this.checked;
                 if (this.checked) {
                     view.find('.sector-title').show();
                 } else {
@@ -591,7 +598,7 @@ var App = App || {};
         },
         _newSector: function (json) {
             if (json != null) {
-                Editor.editSector = new Sector();
+                Editor.editSector = new Sector(Editor.area);
                 Editor.editSector.set(json);
                 Editor._addSector(Editor.editSector);
             }
