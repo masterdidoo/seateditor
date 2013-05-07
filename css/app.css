@@ -1,0 +1,158 @@
+.sector-widget td {
+    padding: 5px 10px 5px 10px;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.editor-sector {
+    /*display: none;*/
+    margin-top: 10px;
+    padding: 10px;
+    border: 1px solid #000;
+    overflow: auto;
+}
+
+.ui-rotatable-handle {
+    background: #f5dc58;
+    border: 1px solid #FFF;
+    border-radius: 4px;
+    -moz-border-radius: 4px;
+    -o-border-radius: 4px;
+    -webkit-border-radius: 4px;
+    cursor: pointer;
+
+    height: 8px;
+    left: 50%;
+    margin: 0 0 0 -4px;
+    position: absolute;
+    top: -4px;
+    width: 8px;
+}
+
+.sector-draggable .ui-draggable-dragging {
+    visibility: hidden;
+}
+
+.sector-draggable div.sector-title {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    text-align: center;
+    top: 10%;
+}
+
+.sector-draggable div.place {
+    width: 10px;
+    height: 9px;
+    line-height: 9px;
+    border: none;
+    float: left;
+    margin: 0;
+}
+
+.sector-draggable div.selected {
+    width: 9px;
+    height: 9px;
+    line-height: 9px;
+    border: 1px solid;
+    float: left;
+    margin: 0 -1px -1px 0;
+    background-color: lightgreen;
+}
+
+.sector-draggable div.row-center {
+    margin: 0 5px 0 5px;
+}
+
+.sector-draggable div.row-left {
+    margin: 0 10px 0 0;
+}
+
+.sector-draggable div.row-right {
+    margin: 0 0 0 10px;
+}
+
+.sector-draggable td {
+    padding: 0;
+    text-align: center;
+    white-space: nowrap;
+}
+
+div.sector-draggable {
+    display: table;
+}
+
+.sector div.place {
+    width: 26px;
+    height: 26px;
+    line-height: 26px;
+    border: 1px solid #000;
+    float: left;
+    margin: 0 1px 0 1px;
+}
+
+.sector div.place-dialog {
+    display: none;
+    position: absolute;
+    z-index: 10;
+    padding: 2px;
+    margin: -3px;
+    /*margin: -4px;*/
+    /*border: 1px solid #000;*/
+    /*background-color: #0077b3;*/
+}
+
+.sector div.place-dialog input {
+    margin: 0px;
+    width: 24px;
+    padding: 3px 1px 3px 1px;
+    border-radius: 0;
+    -webkit-border-radius: 0;
+}
+
+.sector div.curent {
+    border: 2px blue;
+    margin: -1px 0px 0 0px;
+}
+
+.sector div.selected {
+    background-color: lightgreen;
+}
+
+.sector div.place-group-1 {
+    background-color: #53e01f;
+}
+
+.sector div.place-group-2 {
+    background-color: #d572e0;
+}
+
+.sector div.place-group-3 {
+    background-color: #e0e024;
+}
+
+.sector input.row-name {
+    margin: 0 15px 0 0;
+    padding: 3px 4px 3px 4px;
+    border-radius: 0;
+    -webkit-border-radius: 0;
+}
+
+.sector div.row-center {
+    margin: 0 15px 0 15px;
+}
+
+.sector div.row-left {
+    margin: 0 30px 0 0;
+}
+
+.sector div.row-right {
+    margin: 0 0 0 30px;
+}
+
+.sector td {
+    padding: 1px;
+    text-align: center;
+    white-space: nowrap;
+}
+
