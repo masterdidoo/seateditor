@@ -249,8 +249,7 @@ var App = App || {};
             rez = $('<div>')
                 .html(
                     $('<div class="sector-title">')
-                        .text(this.name)
-                        .css({position: 'absolute'})
+                        .html($('<span class="label label-info">').text(this.name))
                 )
                 .append(rez);
             return rez;
@@ -548,6 +547,13 @@ var App = App || {};
             this.view = place.find('#sectors-holder');
             place.find('#area-save').on('click', function () {
                 $('#rez').text(Editor.json());
+            });
+            place.find('#show-sector-title').on('change', function (e) {
+                if (this.checked) {
+                    view.find('.sector-title').show();
+                } else {
+                    view.find('.sector-title').hide();
+                }
             });
         },
         load: function (a) {
