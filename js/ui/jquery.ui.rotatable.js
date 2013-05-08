@@ -15,10 +15,11 @@
         // Default Values
         var defaults = {
                 angle: 0,
-                rotatorClass: 'ui-rotatable-handle'
+                rotatorClass: 'ui-rotatable-handle',
+                centerClass: 'ui-rotatable-center'
             }, opts = $.extend(defaults, options),
             _this = this,
-            _rotator, _center_coords;
+            _rotator, _center, center_coords, angle;
 
         // Initialization
         this.intialize = function () {
@@ -30,24 +31,15 @@
         // Create Rotation Handler
         this.createHandler = function () {
             _rotator = $('<div class="' + opts.rotatorClass + '"></div>');
+            _center = $('<div class="' + opts.centerClass + '"></div>');
             _this.append(_rotator);
+            _this.append(_center);
 
             this.bindRotation();
         };
 
         // Bind Rotation to Handler
         this.bindRotation = function () {
-
-            // IE Fix
-//            if ($.browser.msie) {
-//                _rotator.mousedown(function (e) {
-//                    e.stopPropagation();
-//                });
-//
-//                _rotator.mouseup(function (e) {
-//                    e.stopPropagation();
-//                });
-//            }
 
             _rotator.draggable({
                 handle: _rotator,
@@ -56,20 +48,20 @@
                 addClasses: false,
                 start: function (e) {
                     center_coords = {
-                        'x': _this.parent().offset().left + _this.width() * 0.5,
-                        'y': _this.parent().offset().top + _this.height() * 0.5
+                        x: _center.offset().left,
+                        y: _center.offset().top
                     };
                 },
                 drag: function (e) {
-                    // Mouse Coords
-                    mouse_coords = {
-                        'x': e.pageX,
-                        'y': e.pageY
+                    var mouse_coords = {
+                        x: e.pageX,
+                        y: e.pageY
                     };
 
                     angle = _this.radToDeg(_this.getAngle(mouse_coords, center_coords)) - 90;
-                    if ($.browser.msie)
+                    if ($.browser.msie) {
                         angle = -angle;
+                    }
 
                     return _this.rotate(angle);
                 },

@@ -537,13 +537,13 @@ var App = App || {};
         this.isSectorTtitleVisible = true;
         this._top = a.top;
         this._left = a.left;
-        this.scene = $('<table class="area-scene"><tr><td><strong>Сцена</strong></td></tr></table>').css({
+        this.scene = $('<div class="area-scene" title="Сцена"><strong>Сцена</strong></div>').css({
             position: 'absolute',
             top: a.top + 'px',
             left: a.left + 'px',
             height: a.height + 'px',
             width: a.width + 'px'
-        }).draggable({ containment: 'parent' }).resizable();
+        }).resizable({minHeight: 20}).draggable({ containment: 'parent' });
         a.sectors.forEach(function (s) {
             var sector = new Sector(self);
             sector.set(s);
