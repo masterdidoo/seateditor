@@ -22,10 +22,14 @@
 
     <script type="text/javascript" src="js/editors/editor-sector.js"></script>
     <script type="text/javascript">
-        var test = {
+        var test =  {
             name: "Большой зал",
+            top:120,
+            left:370,
+            height:10,
+            width:110,
             "sectors": [
-                {"name": "Сектор 1", "top": 60, "left": 380, "rows": [
+                {"name": "Сектор 1", "top": 60, "left": 380, "placeRows": [
                     {"name": "1", "places": [
                         {"name": 1, "pos": 1},
                         {"name": 2, "pos": 2},
@@ -67,7 +71,7 @@
                         {"name": 8, "pos": 8}
                     ], "pos": 4}
                 ]},
-                {"name": "Сектор 2", "top": 25, "left": 400, "rows": [
+                {"name": "Сектор 2", "top": 25, "left": 400, "placeRows": [
                     {"name": "1", "places": [
                         {"name": "1", "pos": 0},
                         {"name": "2", "pos": 1},
@@ -81,7 +85,7 @@
                         {"name": "4", "pos": 3}
                     ], "pos": 1}
                 ]},
-                {"name": "Сектор 3", "rotate": -30, "top": 75, "left": 330, "rows": [
+                {"name": "Сектор 3", "rotate": -30, "top": 75, "left": 330, "placeRows": [
                     {"name": "1", "places": [
                         {"name": "1", "pos": 0},
                         {"name": "2", "pos": 1},
@@ -94,7 +98,7 @@
                         {"name": "4", "pos": 3}
                     ], "pos": 1}
                 ]},
-                {"name": "Сектор 4", "rotate": 30, "top": 75, "left": 470, "rows": [
+                {"name": "Сектор 4", "rotate": 30, "top": 75, "left": 470, "placeRows": [
                     {"name": "1", "places": [
                         {"name": "1", "pos": 0},
                         {"name": "2", "pos": 1},
@@ -116,6 +120,20 @@
                 }
         );
     </script>
+    <script>
+        function myFunction() {
+            $.ajax({
+                type: 'POST',
+                dataType: 'json',
+                data: JSON.stringify(test),
+                contentType: "application/json; charset=utf-8",
+                url: '/spring/json/area',
+                success: function (data) {
+                    alert(data);
+                }
+            });
+        }
+    </script>
 </head>
 <body>
 
@@ -129,7 +147,8 @@
         </ul>
     </div>
 </div>
-
+<button type="submit" class="btn btn-primary" onclick="myFunction()"></i> Сохранить1
+</button>
 <div class="container-fluid">
 
     <div class="row-fluid">
