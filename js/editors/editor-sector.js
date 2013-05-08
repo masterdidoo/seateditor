@@ -215,49 +215,60 @@ var App = App || {};
     Sector.prototype = {
         appendDraggable: function (place) {
             var self = this;
-            var r = $('<div>').html(this._getDraggable());
-            var s = $('<div>').html(r);
+            this.content = $('<div>').html(this._getDraggable());
+            var s = $('<div>').html(this.content);
             s.rotatable({
                 angle: this.rotate,
                 stop: function (a) {
                     self.rotate = a;
                 }
             });
-            s = $('<div class="sector-draggable">').html(s).draggable({
-                containment: 'parent',
-                stop: function (e, i) {
-                    self.top = i.position.top - pos.top;
-                    self.left = i.position.left - pos.left;
-                }
-            });
+            s = $('<div class="sector-draggable">').html(s).css({
+                position: 'absolute',
+                top: this.top,
+                left: this.left
+            }).draggable({containment: 'parent'});
             place.append(s);
-            s.css({position: 'absolute'});
-            var pos = s.position();
-            s.css({
-                top: pos.top + this.top,
-                left: pos.top + this.left
-            });
-            this.draggable = r;
+            if (!this.area.isSectorTtitleVisible) {
+                this.titlePlace.hide();
+            }
+            this.titlePlace.append(this._createTitle(this.content.width()));
+            this.draggable = s;
         },
         updateDraggable: function () {
             var html = this._getDraggable();
-            if (!this.area.isSectorNameVisible) {
-                html.find('.sector-title').hide();
+            this.content.html(html);
+            if (!this.area.isSectorTtitleVisible) {
+                this.titlePlace.hide();
             }
-            this.draggable.html(html);
+            this.titlePlace.append(this._createTitle(html.width()));
         },
         _getDraggable: function () {
-            var rez = $('<table>').attr('title', this.name);
+            var rez = $('<table>');
             this.rows.forEach(function (r) {
                 rez.append(r.getDraggable());
             });
-            rez = $('<div>')
-                .html(
-                    $('<div class="sector-title">')
-                        .html($('<span class="label label-info">').text(this.name))
-                )
-                .append(rez);
+            this.titlePlace = $('<div class="sector-title">');
+            rez = $('<div>').append(this.titlePlace)
+                .append(rez).attr('title', this.name);
             return rez;
+        },
+        _createTitle: function (width) {
+            var n = this.name;
+            var title = $('<span class="label label-info">').text(n);
+            var test = $('<div style="visibility: hidden; position: absolute">').appendTo($('body'));
+            test.html(title);
+
+            while (n.length > 0) {
+                if (test.width() < width) {
+                    test.remove();
+                    return title;
+                }
+                n = n.substr(0, n.length - 1);
+                title.text(n + '...');
+            }
+            test.remove();
+            return '';
         },
         init: function (self) {
             this.namePlace = $('<label class="form-inline">Название сектора: </label>')
@@ -282,7 +293,7 @@ var App = App || {};
             }
             var maxPos = 0;
             var minPos = 1000000;
-            $data.rows.forEach(function (r) {
+            $data.placeRows.forEach(function (r) {
                 if (r.places instanceof Array) {
                     r.places.forEach(function (p) {
                         var pos = parseInt(p.pos);
@@ -297,9 +308,9 @@ var App = App || {};
             });
             this.cols = maxPos - minPos + 1;
             var self = this;
-            if ($data.rows.length > 0) {
-                var startPos = parseInt($data.rows[0].pos);
-                $data.rows.forEach(function (r) {
+            if ($data.placeRows.length > 0) {
+                var startPos = parseInt($data.placeRows[0].pos);
+                $data.placeRows.forEach(function (r) {
                     var row = new PlaceRow(self);
                     var pos = parseInt(r.pos);
                     row.set(r, minPos);
@@ -388,14 +399,22 @@ var App = App || {};
                     rows.push(x);
                 }
             });
+            if (this.draggable != null) {
+                copyTopLeft(this.draggable.position(), this);
+            }
             return {
                 name: this.name,
-                rows: rows,
+                placeRows: rows,
                 top: this.top,
                 left: this.left,
                 rotate: this.rotate
             };
         }
+    }
+
+    function copyTopLeft(from, to) {
+        to.top = from.top;
+        to.left = from.left;
     }
 
     var self = {
@@ -512,17 +531,30 @@ var App = App || {};
 
     function Area(a) {
         var self = this;
+        this.id = a.id;
         this.name = a.name;
         this.sectors = [];
         this.isSectorTtitleVisible = true;
+        this._top = a.top;
+        this._left = a.left;
+        this.scene = $('<table class="area-scene"><tr><td><strong>Сцена</strong></td></tr></table>').css({
+            position: 'absolute',
+            top: a.top + 'px',
+            left: a.left + 'px',
+            height: a.height + 'px',
+            width: a.width + 'px'
+        }).draggable({ containment: 'parent' }).resizable();
         a.sectors.forEach(function (s) {
-            var sector = new Sector(this);
+            var sector = new Sector(self);
             sector.set(s);
             self.sectors.push(sector);
         });
     }
 
     Area.prototype = {
+        appendScene: function (place) {
+            this.scene.appendTo(place);
+        },
         json: function () {
             var sectors = [];
             this.sectors.forEach(function (r) {
@@ -531,10 +563,30 @@ var App = App || {};
                     sectors.push(x);
                 }
             });
+            var pos = this.scene.position();
             return {
+                id: this.id,
                 name: this.name,
+                top: pos.top,
+                left: pos.left,
+                height: this.scene.height(),
+                width: this.scene.width(),
                 sectors: sectors
             };
+        }
+    }
+
+    function addPlace(a1, a2) {
+        return {
+            top: a1.top + a2.top,
+            left: a1.left + a2.left
+        }
+    }
+
+    function minusPlace(a1, a2) {
+        return {
+            top: a1.top - a2.top,
+            left: a1.left - a2.left
         }
     }
 
@@ -565,6 +617,7 @@ var App = App || {};
         },
         load: function (a) {
             var area = new Area(a);
+            area.appendScene(Editor.view);
             area.sectors.forEach(function (s) {
                 Editor._addSector(s);
             });
@@ -588,21 +641,22 @@ var App = App || {};
             s.appendDraggable(Editor.view);
         },
         _saveSector: function (json) {
+            Editor.place.show();
             if (json != null) {
                 var s = Editor.editSector;
                 s.set(json);
                 s.updateDraggable();
                 Editor.link.text(s.name);
             }
-            Editor.place.show();
         },
         _newSector: function (json) {
+            Editor.place.show();
             if (json != null) {
                 Editor.editSector = new Sector(Editor.area);
                 Editor.editSector.set(json);
                 Editor._addSector(Editor.editSector);
+                Editor.area.sectors.push(Editor.editSector); //TODO изменить
             }
-            Editor.place.show();
         }
     }
 

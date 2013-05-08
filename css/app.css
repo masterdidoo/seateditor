@@ -29,13 +29,23 @@
     width: 8px;
 }
 
+table.area-scene {
+    border: 1px solid;
+    background-color: sienna;
+    text-align: center;
+    vertical-align: middle;
+}
+
+table.area-scene strong {
+    color: #ffffff;
+}
+
 .sector-draggable .ui-draggable-dragging {
     visibility: hidden;
 }
 
 .sector-draggable div.sector-title {
     position: absolute;
-    height: 100%;
     width: 100%;
     text-align: center;
     top: 10%;
