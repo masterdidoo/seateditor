@@ -203,6 +203,7 @@ var App = App || {};
 
     function Sector(a) {
         var self = this;
+        this.scale = 1;
         this.placeFrom = -1;
         this.placeTo = -1;
         this.name = null;
@@ -242,6 +243,22 @@ var App = App || {};
                 this.titlePlace.hide();
             }
             this.titlePlace.append(this._createTitle(html.width()));
+        },
+        updatePos: function () {
+            if (this.draggable != null) {
+                var from = this.draggable.position();
+                this.top = Math.round(from.top / this.scale);
+                this.left = Math.round(from.left / this.scale);
+            }
+        },
+        setScale: function (scale) {
+            this.updatePos();
+            this.scale = scale;
+            this.draggable.css({
+                top: this.top * scale,
+                left: this.left * scale
+            });
+            this.updateDraggable();
         },
         _getDraggable: function () {
             var rez = $('<table>');
@@ -399,9 +416,7 @@ var App = App || {};
                     rows.push(x);
                 }
             });
-            if (this.draggable != null) {
-                copyTopLeft(this.draggable.position(), this);
-            }
+            this.updatePos();
             return {
                 name: this.name,
                 placeRows: rows,
@@ -535,6 +550,7 @@ var App = App || {};
         this.name = a.name;
         this.sectors = [];
         this.isSectorTtitleVisible = true;
+        this.scale = 1;
         this._top = a.top;
         this._left = a.left;
         this.scene = $('<div class="area-scene" title="Сцена"><strong>Сцена</strong></div>').css({
@@ -555,6 +571,26 @@ var App = App || {};
         appendScene: function (place) {
             this.scene.appendTo(place);
         },
+        setScale: function (scale) {
+            this.updatePos();
+            this.sectors.forEach(function (s) {
+                s.setScale(scale);
+            });
+            this.scene.css({
+                top: this.top*scale + 'px',
+                left: this.left*scale + 'px',
+                height: this.height*scale + 'px',
+                width: this.width*scale + 'px'
+            })
+            this.scale = scale;
+        },
+        updatePos: function () {
+            var from = this.scene.position();
+            this.top = Math.round(from.top / this.scale);
+            this.left = Math.round(from.left / this.scale);
+            this.height = Math.round(this.scene.height() / this.scale);
+            this.width = Math.round(this.scene.width() / this.scale);
+        },
         json: function () {
             var sectors = [];
             this.sectors.forEach(function (r) {
@@ -563,14 +599,14 @@ var App = App || {};
                     sectors.push(x);
                 }
             });
-            var pos = this.scene.position();
+            this.updatePos();
             return {
                 id: this.id,
                 name: this.name,
-                top: pos.top,
-                left: pos.left,
-                height: this.scene.height(),
-                width: this.scene.width(),
+                top: this.top,
+                left: this.left,
+                height: this.height,
+                width: this.width,
                 sectors: sectors
             };
         }
@@ -591,6 +627,7 @@ var App = App || {};
     }
 
     var Editor = {
+        scale: 1,
         init: function (place) {
             this.place = place;
             this.list = place.find('#sectors-list');
@@ -599,10 +636,13 @@ var App = App || {};
                 Editor.place.hide();
                 App.sectorEditor.load(null, Editor._newSector);
             });
-            var view = place.find("#area-view");
-            view.resizable();
-            view.height(window.innerHeight - 40);
-            this.view = place.find('#sectors-holder');
+            var tmp = place.find("#area-view");
+            tmp.resizable();
+            tmp.height(window.innerHeight - 40);
+            var view = place.find('#sectors-holder');
+            this.view = view;
+            this.height = view.height();
+            this.width = view.width();
             place.find('#area-save').on('click', function () {
                 $('#rez').text(Editor.json());
             });
@@ -614,6 +654,50 @@ var App = App || {};
                     view.find('.sector-title').hide();
                 }
             });
+            place.find('#zoom-in').on('click', function (e) {
+                Editor.setScale(+1);
+            });
+            place.find('#zoom-0').on('click', function (e) {
+                Editor.setScale(0);
+            });
+            place.find('#zoom-out').on('click', function (e) {
+                Editor.setScale(-1);
+            });
+        },
+        setScale: function (scale) {
+            Editor.scale += scale;
+            if (Editor.scale < 1 || scale == 0) {
+                Editor.scale = 1;
+            }
+            var width = 10 * Editor.scale;
+            var height = width - 1;
+            var style = '.sector-draggable div.place {' +
+                'width: ' + width + 'px;' +
+                'height: ' + height + 'px;' +
+                'line-height: ' + height + 'px;' +
+                '}\n' +
+
+                '.sector-draggable div.selected {' +
+                'width: ' + height + 'px;' +
+                'height: ' + height + 'px;' +
+                'line-height: ' + height + 'px;' +
+                '}\n' +
+
+                '.sector-draggable div.row-center {' +
+                'margin: 0 ' + width / 2 + 'px 0 ' + width / 2 + 'px;' +
+                '}\n' +
+
+                '.sector-draggable div.row-left {' +
+                'margin: 0 ' + width + 'px 0 0;' +
+                '}\n' +
+
+                '.sector-draggable div.row-right {' +
+                'margin: 0 0 0 ' + width + 'px;' +
+                '}\n';
+            $('#style').html(style);
+            Editor.area.setScale(Editor.scale);
+            Editor.view.height(this.height * Editor.scale);
+            Editor.view.width(this.width * Editor.scale);
         },
         load: function (a) {
             var area = new Area(a);
