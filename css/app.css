@@ -41,7 +41,7 @@ div.ui-rotatable-center {
     visibility: hidden;
 }
 
-div.area-scene {
+div.ae-area-scene {
     border: 1px solid;
     background-color: sienna;
     text-align: center;
@@ -50,12 +50,8 @@ div.area-scene {
     display: table-cell;
 }
 
-div.area-scene strong {
+div.ae-area-scene strong {
     color: #ffffff;
-}
-
-.sector-draggable .ui-draggable-dragging {
-    visibility: hidden;
 }
 
 .sector-draggable div.sector-title {
@@ -102,9 +98,18 @@ div.area-scene strong {
     white-space: nowrap;
 }
 
+.sector-draggable div.sector-rotatable {
+    position: absolute;
+}
+
+.sector-draggable .sector-rotatable .ui-draggable-dragging {
+    visibility: hidden;
+}
+
 div.sector-draggable {
     display: table;
     cursor: move;
+    position: absolute;
 }
 
 .sector div.place {
@@ -181,3 +186,38 @@ div.sector-draggable {
     white-space: nowrap;
 }
 
+div.ae-sector {
+    padding: 0;
+    margin: 0;
+    border: 0;
+    position: absolute;
+    /*height: 0;*/
+    /*width: 0;*/
+}
+
+div.ae-sector div {
+    display: block;
+}
+
+div.ae-sector-rotatable {
+    position: absolute;
+}
+
+div.ae-sector-rotatable .ui-draggable-dragging {
+    visibility: hidden;
+}
+
+div.ea-sector-drag-handler {
+    cursor: move;
+}
+
+div.ea-sector-title {
+    position: absolute;
+}
+
+div.ea-sector-body div {
+    position: absolute;
+    border: 1px solid;
+    margin: 0;
+    background-color: lightgreen;
+}

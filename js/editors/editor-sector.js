@@ -87,11 +87,6 @@ var App = App || {};
     }
 
     PlaceRow.prototype = {
-        getDraggable: function () {
-            var row = this.div.clone();
-            row.find('.place').html('');
-            return $('<tr>').append($('<td>').append(row));
-        },
         set: function ($data, $minPos) {
             this.shift = $data.shift == null ? 0 : $data.shift;
             this.name = $data.name;
@@ -99,16 +94,6 @@ var App = App || {};
             $data.places.forEach(function (p) {
                 self.places[parseInt(p.pos) - $minPos].set(p);
             });
-            this.refresh();
-        },
-        appendPlace: function ($place) {
-            var place = new Place(this);
-            place.set($place);
-            var pos = parseInt($place.pos);
-            if (this.places.length < pos) {
-                this.append(pos - this.places.length);
-            }
-            this.places[pos] = place;
         },
         init: function (self) {
             this.namePlace = $('<input class="input-mini row-name" type="text">').on('change', function () {
@@ -125,16 +110,6 @@ var App = App || {};
                 self.shiftRight();
             }));
             return row;
-        },
-        refresh: function () {
-            if (this.shift > 0) {
-                this.div.attr('class', 'row-right');
-            } else if (this.shift < 0) {
-                this.div.attr('class', 'row-left');
-            } else {
-                this.div.attr('class', 'row-center');
-            }
-            this.namePlace.val(this.name);
         },
         shiftLeft: function () {
             if (this.shift > 0) {
@@ -214,79 +189,6 @@ var App = App || {};
     }
 
     Sector.prototype = {
-        appendDraggable: function (place) {
-            var self = this;
-            this.content = $('<div>').html(this._getDraggable());
-            var s = $('<div>').html(this.content);
-            s.rotatable({
-                angle: this.rotate,
-                stop: function (a) {
-                    self.rotate = a;
-                }
-            });
-            s = $('<div class="sector-draggable">').html(s).css({
-                position: 'absolute',
-                top: this.top,
-                left: this.left
-            }).draggable({containment: 'parent'});
-            place.append(s);
-            if (!this.area.isSectorTtitleVisible) {
-                this.titlePlace.hide();
-            }
-            this.titlePlace.append(this._createTitle(this.content.width()));
-            this.draggable = s;
-        },
-        updateDraggable: function () {
-            var html = this._getDraggable();
-            this.content.html(html);
-            if (!this.area.isSectorTtitleVisible) {
-                this.titlePlace.hide();
-            }
-            this.titlePlace.append(this._createTitle(html.width()));
-        },
-        updatePos: function () {
-            if (this.draggable != null) {
-                var from = this.draggable.position();
-                this.top = Math.round(from.top / this.scale);
-                this.left = Math.round(from.left / this.scale);
-            }
-        },
-        setScale: function (scale) {
-            this.updatePos();
-            this.scale = scale;
-            this.draggable.css({
-                top: this.top * scale,
-                left: this.left * scale
-            });
-            this.updateDraggable();
-        },
-        _getDraggable: function () {
-            var rez = $('<table>');
-            this.rows.forEach(function (r) {
-                rez.append(r.getDraggable());
-            });
-            this.titlePlace = $('<div class="sector-title">');
-            rez = $('<div>').append(this.titlePlace)
-                .append(rez).attr('title', this.name);
-            return rez;
-        },
-        _createTitle: function (width) {
-            var n = this.name;
-            var title = $('<span class="label label-info">').text(n);
-            var test = $('<div style="visibility: hidden; position: absolute">').appendTo($('body'));
-            test.html(title);
-
-            while (n.length > 0) {
-                if (test.width() < width) {
-                    test.remove();
-                    return title;
-                }
-                n = n.substr(0, n.length - 1);
-                title.text(n + '...');
-            }
-            test.remove();
-            return '';
-        },
         init: function (self) {
             this.namePlace = $('<label class="form-inline">Название сектора: </label>')
                 .append($('<input type="text" class="input-xxlarge">').on('change', function () {
@@ -304,6 +206,7 @@ var App = App || {};
                 this.top = 0;
                 this.left = 0;
                 this.rotate = 0;
+                this.name = null;
                 this.cols = 20;
                 this.appendRows(10);
                 return;
@@ -323,20 +226,25 @@ var App = App || {};
                     });
                 }
             });
-            this.cols = maxPos - minPos + 1;
-            var self = this;
-            if ($data.placeRows.length > 0) {
-                var startPos = parseInt($data.placeRows[0].pos);
-                $data.placeRows.forEach(function (r) {
-                    var row = new PlaceRow(self);
-                    var pos = parseInt(r.pos);
-                    row.set(r, minPos);
-                    if (self.rows.length < pos - startPos) {
-                        self.appendRows(pos - startPos - self.rows.length);
-                    }
-                    self.rows.push(row);
-                    self.jq.append(row.jq);
-                });
+            if (maxPos < minPos) {
+                this.cols = 20;
+                this.appendRows(10);
+            } else {
+                this.cols = maxPos - minPos + 1;
+                var self = this;
+                if ($data.placeRows.length > 0) {
+                    var startPos = parseInt($data.placeRows[0].pos);
+                    $data.placeRows.forEach(function (r) {
+                        var row = new PlaceRow(self);
+                        var pos = parseInt(r.pos);
+                        row.set(r, minPos);
+                        if (self.rows.length < pos - startPos) {
+                            self.appendRows(pos - startPos - self.rows.length);
+                        }
+                        self.rows.push(row);
+                        self.jq.append(row.jq);
+                    });
+                }
             }
             this.name = $data.name;
             this.top = $data.top;
@@ -416,7 +324,6 @@ var App = App || {};
                     rows.push(x);
                 }
             });
-            this.updatePos();
             return {
                 name: this.name,
                 placeRows: rows,
@@ -543,207 +450,5 @@ var App = App || {};
     }
 
     App.sectorEditor = self;
-
-    function Area(a) {
-        var self = this;
-        this.id = a.id;
-        this.name = a.name;
-        this.sectors = [];
-        this.isSectorTtitleVisible = true;
-        this.scale = 1;
-        this._top = a.top;
-        this._left = a.left;
-        this.scene = $('<div class="area-scene" title="Сцена"><strong>Сцена</strong></div>').css({
-            position: 'absolute',
-            top: a.top + 'px',
-            left: a.left + 'px',
-            height: a.height + 'px',
-            width: a.width + 'px'
-        }).resizable({minHeight: 20}).draggable({ containment: 'parent' });
-        a.sectors.forEach(function (s) {
-            var sector = new Sector(self);
-            sector.set(s);
-            self.sectors.push(sector);
-        });
-    }
-
-    Area.prototype = {
-        appendScene: function (place) {
-            this.scene.appendTo(place);
-        },
-        setScale: function (scale) {
-            this.updatePos();
-            this.sectors.forEach(function (s) {
-                s.setScale(scale);
-            });
-            this.scene.css({
-                top: this.top*scale + 'px',
-                left: this.left*scale + 'px',
-                height: this.height*scale + 'px',
-                width: this.width*scale + 'px'
-            })
-            this.scale = scale;
-        },
-        updatePos: function () {
-            var from = this.scene.position();
-            this.top = Math.round(from.top / this.scale);
-            this.left = Math.round(from.left / this.scale);
-            this.height = Math.round(this.scene.height() / this.scale);
-            this.width = Math.round(this.scene.width() / this.scale);
-        },
-        json: function () {
-            var sectors = [];
-            this.sectors.forEach(function (r) {
-                var x = r.json()
-                if (x != null) {
-                    sectors.push(x);
-                }
-            });
-            this.updatePos();
-            return {
-                id: this.id,
-                name: this.name,
-                top: this.top,
-                left: this.left,
-                height: this.height,
-                width: this.width,
-                sectors: sectors
-            };
-        }
-    }
-
-    function addPlace(a1, a2) {
-        return {
-            top: a1.top + a2.top,
-            left: a1.left + a2.left
-        }
-    }
-
-    function minusPlace(a1, a2) {
-        return {
-            top: a1.top - a2.top,
-            left: a1.left - a2.left
-        }
-    }
-
-    var Editor = {
-        scale: 1,
-        init: function (place) {
-            this.place = place;
-            this.list = place.find('#sectors-list');
-            this.nameForm = place.find('#name-form');
-            place.find("#add-sector").on('click', function () {
-                Editor.place.hide();
-                App.sectorEditor.load(null, Editor._newSector);
-            });
-            var tmp = place.find("#area-view");
-            tmp.resizable();
-            tmp.height(window.innerHeight - 40);
-            var view = place.find('#sectors-holder');
-            this.view = view;
-            this.height = view.height();
-            this.width = view.width();
-            place.find('#area-save').on('click', function () {
-                $('#rez').text(Editor.json());
-            });
-            place.find('#show-sector-title').on('change', function (e) {
-                Editor.area.isSectorTtitleVisible = this.checked;
-                if (this.checked) {
-                    view.find('.sector-title').show();
-                } else {
-                    view.find('.sector-title').hide();
-                }
-            });
-            place.find('#zoom-in').on('click', function (e) {
-                Editor.setScale(+1);
-            });
-            place.find('#zoom-0').on('click', function (e) {
-                Editor.setScale(0);
-            });
-            place.find('#zoom-out').on('click', function (e) {
-                Editor.setScale(-1);
-            });
-        },
-        setScale: function (scale) {
-            Editor.scale += scale;
-            if (Editor.scale < 1 || scale == 0) {
-                Editor.scale = 1;
-            }
-            var width = 10 * Editor.scale;
-            var height = width - 1;
-            var style = '.sector-draggable div.place {' +
-                'width: ' + width + 'px;' +
-                'height: ' + height + 'px;' +
-                'line-height: ' + height + 'px;' +
-                '}\n' +
-
-                '.sector-draggable div.selected {' +
-                'width: ' + height + 'px;' +
-                'height: ' + height + 'px;' +
-                'line-height: ' + height + 'px;' +
-                '}\n' +
-
-                '.sector-draggable div.row-center {' +
-                'margin: 0 ' + width / 2 + 'px 0 ' + width / 2 + 'px;' +
-                '}\n' +
-
-                '.sector-draggable div.row-left {' +
-                'margin: 0 ' + width + 'px 0 0;' +
-                '}\n' +
-
-                '.sector-draggable div.row-right {' +
-                'margin: 0 0 0 ' + width + 'px;' +
-                '}\n';
-            $('#style').html(style);
-            Editor.area.setScale(Editor.scale);
-            Editor.view.height(this.height * Editor.scale);
-            Editor.view.width(this.width * Editor.scale);
-        },
-        load: function (a) {
-            var area = new Area(a);
-            area.appendScene(Editor.view);
-            area.sectors.forEach(function (s) {
-                Editor._addSector(s);
-            });
-            this.nameForm.val(area.name);
-            this.area = area;
-        },
-        json: function () {
-            return JSON.stringify(this.area.json());
-        },
-        _addSector: function (s) {
-            Editor.list.append(
-                $('<li></li>').append(
-                    $('<a></a>').append(s.name).on('click', function () {
-                        Editor.place.hide();
-                        Editor.link = $(this);
-                        Editor.editSector = s;            //TODO изменить
-                        App.sectorEditor.load(s.json(), Editor._saveSector);
-                    })
-                )
-            );
-            s.appendDraggable(Editor.view);
-        },
-        _saveSector: function (json) {
-            Editor.place.show();
-            if (json != null) {
-                var s = Editor.editSector;
-                s.set(json);
-                s.updateDraggable();
-                Editor.link.text(s.name);
-            }
-        },
-        _newSector: function (json) {
-            Editor.place.show();
-            if (json != null) {
-                Editor.editSector = new Sector(Editor.area);
-                Editor.editSector.set(json);
-                Editor._addSector(Editor.editSector);
-                Editor.area.sectors.push(Editor.editSector); //TODO изменить
-            }
-        }
-    }
-
-    App.areaEditor = Editor;
 
 }(jQuery));
