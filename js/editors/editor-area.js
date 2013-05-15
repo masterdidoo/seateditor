@@ -258,35 +258,35 @@ var App = App || {};
         scale: 1,
         init: function (place) {
             this.place = place;
-            this.list = place.find('#sectors-list');
-            this.nameForm = place.find('#name-form');
-            place.find("#add-sector").on('click', function () {
+            this.list = place.find('#ae-sectors-list');
+            this.nameForm = place.find('#ae-name-form');
+            place.find("#ae-add-sector").on('click', function () {
                 Editor.place.hide();
                 App.sectorEditor.load(null, Editor._newSector);
             });
-            var tmp = place.find("#area-view");
+            var tmp = place.find("#ae-area-view");
             tmp.resizable();
             tmp.height(window.innerHeight - 40);
-            var view = place.find('#sectors-holder');
+            var view = place.find('#ae-sectors-holder');
             this.view = view;
             this.height = view.height();
             this.width = view.width();
-            place.find('#area-save').on('click', function () {
-                $('#rez').text(Editor.json());
+            place.find('#ae-area-save').on('click', function () {
+                $('#ae-rez').text(Editor.json());
             });
-            place.find('#show-sector-title').on('change', function (e) {
+            place.find('#ae-show-sector-title').on('change', function (e) {
                 var checked = this.checked;
                 Editor.area.sectors.forEach(function (s) {
                     s.setVisibleTitle(checked);
                 });
             });
-            place.find('#zoom-in').on('click', function (e) {
+            place.find('#ae-zoom-in').on('click', function (e) {
                 Editor.setScale(+0.1);
             });
-            place.find('#zoom-0').on('click', function (e) {
+            place.find('#ae-zoom-0').on('click', function (e) {
                 Editor.setScale(0);
             });
-            place.find('#zoom-out').on('click', function (e) {
+            place.find('#ae-zoom-out').on('click', function (e) {
                 Editor.setScale(-0.1);
             });
         },
