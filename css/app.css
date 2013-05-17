@@ -20,7 +20,7 @@ div.ui-rotatable-handle {
     -o-border-radius: 4px;
     -webkit-border-radius: 4px;
     cursor: url("../img/rotate.cur"),url("./img/rotate.cur"),pointer;
-
+    visibility: visible;
     height: 8px;
     left: 50%;
     margin: 0 0 0 -4px;
@@ -48,6 +48,7 @@ div.ae-area-scene {
     vertical-align: middle;
     cursor: move;
     display: table-cell;
+    position: absolute;
 }
 
 div.ae-area-scene strong {
@@ -143,6 +144,7 @@ div.ae-sector div {
 
 div.ae-sector-rotatable {
     position: absolute;
+    visibility: hidden;
 }
 
 div.ae-sector-rotatable .ui-draggable-dragging {
@@ -150,6 +152,7 @@ div.ae-sector-rotatable .ui-draggable-dragging {
 }
 
 div.ea-sector-drag-handler {
+    visibility: visible;
     cursor: move;
 }
 
