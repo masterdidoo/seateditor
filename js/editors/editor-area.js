@@ -2,12 +2,16 @@ var App = App || {};
 
 (function ($) {
 
-    function Sector(s, place, a, scale) {
+    function Sector(s, a) {
         this.size = 10;
         this.area = a;
-        this.scale = scale == null ? 1 : scale;
+        this.scale = a.scale;
+        this.start = a.start;
+        this.top = 0;
+        this.left = 0;
+        this._start = {X: 0, Y: 0};
         this.isTitleVisible = true;
-        this.init(place);
+        this.init(a.place);
         this.set(s);
     }
 
@@ -21,18 +25,15 @@ var App = App || {};
             this._body = $('<div class="ea-sector-body">').appendTo(this._dragHandler);
             this._title = $('<div class="ea-sector-title">').appendTo(this._dragHandler);
             this.jq.draggable({
-                containment: 'parent',
-//                revert: 'invalid',
-//                zIndex: 10,
+                containment: place,
                 handle: this._dragHandler,
                 drag: function (event, info) {
-                    self.area.updatePos(self,info.position,self.polygon);
+                    return self.area.updatePos(self, info.position, self.polygon);
                 }
             });
             this._rotator.rotatable({
                 stop: function (a) {
                     var polygon = self.polygon.clone();
-//                    self.polygon.rotate();
                     self.polygon.rotate(a - self.rotate);
                     if (self.area.isIntersect(self.polygon)) {
                         self.polygon = polygon;
@@ -45,45 +46,6 @@ var App = App || {};
                     }
                 }
             });
-        },
-        _updatePos: function (info) {
-            var from = info.position,
-                newTop = Math.round(from.top / this.scale),
-                newLeft = Math.round(from.left / this.scale);
-            this.polygon.moveTo(newLeft, newTop);
-            if (!this.area.isIntersect(this.polygon)) {
-                this.top = newTop;
-                this.left = newLeft;
-                return;
-            }
-
-            newLeft = newLeft - this.left;
-            if (newLeft != 0) {
-                newLeft = this.left + newLeft / Math.abs(newLeft);
-                this.polygon.moveTo(newLeft, this.top);
-                if (!this.area.isIntersect(this.polygon)) {
-                    from.top = this.top * this.scale;
-                    from.left = newLeft * this.scale;
-                    this.left = newLeft;
-                    return;
-                }
-            }
-
-            newTop = newTop - this.top;
-            if (newTop != 0) {
-                newTop = this.top + newTop / Math.abs(newTop);
-                this.polygon.moveTo(this.left, newTop);
-                if (!this.area.isIntersect(this.polygon)) {
-                    this.top = newTop;
-                    from.top = newTop * this.scale;
-                    from.left = this.left * this.scale;
-                    return;
-                }
-            }
-
-            this.polygon.moveTo(this.left, this.top);
-            from.top = this.top * this.scale;
-            from.left = this.left * this.scale;
         },
         setScale: function (scale) {
             this.scale = scale;
@@ -117,11 +79,22 @@ var App = App || {};
             this._title.empty();
             test.remove();
         },
+        setStart: function () {
+            if (this.start.X != this._start.Y || this.start.Y != this._start.Y) {
+                var dX = this.start.X - this._start.X,
+                    dY = this.start.Y - this._start.Y;
+                this.top += dY * this.scale;
+                this.left += dX * this.scale;
+                this._start.X = this.start.X;
+                this._start.Y = this.start.Y;
+                this.polygon.moveTo(this.left, this.top);
+            }
+        },
         render: function () {
-            var size = this.size * this.scale;
+            var size = (this.size * this.scale);
             this.jq.css({
-                top: this.top * this.scale,
-                left: this.left * this.scale
+                top: (this.top * this.scale),
+                left: (this.left * this.scale)
             });
             var body = this._body.empty();
             this._rotator.rotate(this.rotate);
@@ -149,16 +122,15 @@ var App = App || {};
             });
         },
         set: function (data) {
-//            this.jq.html('');
             if (data == null) {
                 this.top = 0;
                 this.left = 0;
                 this.rotate = 0;
                 return;
             }
-            this.top = data.top;
-            this.left = data.left;
-            this.rotate = data.rotate == null ? 0 : data.rotate;
+            if (data.top != null) this.top = data.top;
+            if (data.left != null) this.left = data.left;
+            if (data.rotate != null) this.rotate = data.rotate;
             this.name = data.name;
             this.placeRows = data.placeRows;
             //TODO вынести в код сохранения сектора
@@ -215,6 +187,23 @@ var App = App || {};
                 placeRows: this.placeRows
             };
         }
+    }
+
+    function comparePoint(points, min, max) {
+        points.forEach(function (p) {
+            if (p.X > max.X) {
+                max.X = p.X;
+            }
+            if (p.X < min.X) {
+                min.X = p.X;
+            }
+            if (p.Y > max.Y) {
+                max.Y = p.Y;
+            }
+            if (p.Y < min.Y) {
+                min.Y = p.Y;
+            }
+        });
     }
 
     var Debug = {
@@ -333,8 +322,8 @@ var App = App || {};
             this.points().forEach(function (node) {
                 var x = x0 + (node.X - x0) * cos + (y0 - node.Y) * sin;
                 var y = y0 + (node.X - x0) * sin + (node.Y - y0) * cos;
-                node.X = x;
-                node.Y = y;
+                node.X = Math.round(x);
+                node.Y = Math.round(y);
             });
         },
         points: function () {
@@ -352,11 +341,17 @@ var App = App || {};
             this.polygons = [
                 [
                     {X: x, Y: y},
-                    {X: x + w + 1, Y: y},
-                    {X: x + w + 1, Y: y + h + 1},
-                    {X: x, Y: y + h + 1}
+                    {X: x + w, Y: y},
+                    {X: x + w, Y: y + h },
+                    {X: x, Y: y + h }
                 ]
             ];
+        },
+        getMinMaxXY: function () {
+            var min = {X: 1000000, Y: 1000000},
+                max = {X: 0, Y: 0};
+            comparePoint(this.points(), min, max);
+            return [min, max];
         },
         addPlace: function (col, row, size, shift) {
             var x = col * size,
@@ -389,31 +384,154 @@ var App = App || {};
         }
     }
 
-    function Area(a, place) {
+    function Scene(a, area) {
         var self = this;
+        this.name = 'Сцена';
+        this._start = {X: 0, Y: 0};
+        this.area = area;
+        this.scale = area.scale;
+        this.start = area.start;
+        this.top = a.top + this.start.Y;
+        this.left = a.left + this.start.X;
+        this.height = a.height;
+        this.width = a.width;
+        this.polygon = new Polygon(0, 0);
+        this.polygon.setRectangle(this.left, this.top, this.width, this.height);
+        this.jq = $('<div class="ae-area-scene" title="Сцена"><strong>Сцена</strong></div>').appendTo(area.place).css({
+            top: (this.top) * this.scale,
+            left: (this.left) * this.scale,
+            height: this.height * this.scale - 1,
+            width: this.width * this.scale - 1
+        }).resizable({
+                autoHide: true,
+                stop: function () {
+                    self._updateSize();
+                }
+            }).draggable({
+                containment: 'parent',
+                drag: function (e, info) {
+                    return self.area.updatePos(self, info.position, self.polygon);
+                }
+            });
+    }
+
+    Scene.prototype = {
+        setStart: function () {
+            if (this.start.X != this._start.Y || this.start.Y != this._start.Y) {
+                var dX = this.start.X - this._start.X,
+                    dY = this.start.Y - this._start.Y;
+                this.top += dY * this.scale;
+                this.left += dX * this.scale;
+                this._start.X = this.start.X;
+                this._start.Y = this.start.Y;
+                this.polygon.moveTo(this.left, this.top);
+            }
+        },
+        render: function () {
+            this.jq.css({
+                top: ((this.top) * this.scale),
+                left: ((this.left) * this.scale),
+                height: (this.height * this.scale) - 1,
+                width: (this.width * this.scale) - 1
+            });
+        },
+        _updateSize: function () {
+            var height = Math.round(this.jq.height() / this.scale),
+                width = Math.round(this.jq.width() / this.scale);
+            this.polygon.setRectangle(this.left, this.top, width, height);
+            if (this.area.isIntersect(this.polygon)) {
+                this.polygon.setRectangle(this.left, this.top, this.width, this.height);
+                this.jq.css({
+                    height: (this.height * this.scale),
+                    width: (this.width * this.scale)
+                });
+            } else {
+                this.height = height;
+                this.width = width;
+            }
+        },
+        setScale: function (scale) {
+            this.scale = scale;
+            this.render();
+        }
+    };
+
+    function Area(a, place, scroll) {
         this.id = a.id;
+        this.place = place;
+        this.scroll = scroll;
         this.name = a.name;
         this.sectors = [];
         this.intersects = [];
         this.isSectorTtitleVisible = true;
         this.scale = 1;
-        this.top = a.top;
-        this.left = a.left;
-        this.height = a.height;
-        this.width = a.width;
-
-        a.sectors.forEach(function (s) {
-            var sector = new Sector(s, place, self);
-            self.addSector(sector);
-        });
+        this.start = {X: 0, Y: 0};
+        this.init(a);
     }
 
     Area.prototype = {
+        init: function (a) {
+            var self = this;
+            this.scene = new Scene(a, this);
+            this.intersects.push(this.scene);
+            var points = this.scene.polygon.getMinMaxXY();
+            this.min = points[0];
+            this.max = points[1];
+            a.sectors.forEach(function (s) {
+                var sector = new Sector(s, self);
+                self.addSector(sector);
+            });
+
+            var width = this.max.X - this.min.X,
+                height = this.max.Y - this.min.Y;
+
+            this.height = height + 20000;
+            this.width = width + 20000;
+            this.screen = {
+                height: this.place.height(),
+                width: this.place.width()
+            };
+            this.place.height(this.height);
+            this.place.width(this.width);
+            this.setStart(10000 - this.min.X, 10000 - this.min.Y);
+            var scroll = this.scroll;
+            scroll.scrollLeft(10000 + (width - this.screen.width)/ 2 );
+            scroll.scrollTop(10000 + (height - this.screen.height) / 2);
+        },
+        setStart: function (x, y) {
+            this.start.X = x;
+            this.start.Y = y;
+            this.intersects.forEach(function (o) {
+                o.setStart();
+                o.render();
+            });
+        },
         addSector: function (sector) {
+            comparePoint(sector.polygon.getMinMaxXY(), this.min, this.max);
             this.sectors.push(sector);
             this.intersects.push(sector);
         },
         updatePos: function (from, to, polygon) {
+
+            /*
+             if (to.left < 10) {
+             to.left += this.width;
+             this.setStart(this.start.X + this.width, this.start.Y);
+             this.place.width(this.width * 2);
+             this.scroll.scrollLeft(this.width);
+             this.width += this.width;
+             return false
+             }
+             if (to.top < 10) {
+             to.top += this.height;
+             this.place.height(this.height * 2);
+             this.scroll.scrollTop(this.height);
+             this.setStart(this.start.X, this.start.Y + this.height);
+             this.height += this.height;
+             return false
+             }
+             */
+
 //            var start = new Date();
             var self = this,
                 newY = Math.round(to.top / this.scale),
@@ -422,19 +540,17 @@ var App = App || {};
             if (!this.isIntersect(polygon)) {
                 from.left = newX;
                 from.top = newY;
-                return;
+                return true;
             }
-
 //            console.log(start.toLocaleTimeString()+' in '+from.name);
-
-            to.top = from.top * this.scale;
-            to.left = from.left * this.scale;
+            to.top = (from.top * this.scale);
+            to.left = (from.left * this.scale);
 
             function _step(x, y) {
                 polygon.moveTo(x, y);
                 if (!self.isIntersect(polygon)) {
-                    to.left = x * self.scale;
-                    to.top = y * self.scale;
+                    to.left = (x * self.scale);
+                    to.top = (y * self.scale);
                     from.left = x;
                     from.top = y;
                     return true;
@@ -448,13 +564,14 @@ var App = App || {};
                     x = from.left + (dX != 0 ? dX / Math.abs(dX) : 0),
                     dY = newY - from.top,
                     y = from.top + (dY != 0 ? dY / Math.abs(dY) : 0);
-                next = dX != 0 && dY != 0 && _step(x, y)
-                    || dX != 0 && _step(x, from.top)
-                    || dY != 0 && _step(from.left, y);
+                next = Math.abs(dX) >= 1 && Math.abs(dY) >= 1 && _step(x, y)
+                    || Math.abs(dX) >= 1 && _step(x, from.top)
+                    || Math.abs(dY) >= 1 && _step(from.left, y);
             }
 
             polygon.moveTo(from.left, from.top);
 //            console.log((new Date()).toLocaleTimeString()+' out '+from.name +' '+(start - (new Date())));
+            return true;
         },
         isIntersect: function (polygon) {
             Debug.debugArea(this);
@@ -468,104 +585,17 @@ var App = App || {};
             }
             return false;
         },
-        appendScene: function (place) {
-            var self = this;
-            this.scenePolygon = new Polygon(0, 0);
-            this.intersects.push({polygon: this.scenePolygon});
-            this.scenePolygon.setRectangle(this.left, this.top, this.width, this.height);
-            this.scene = $('<div class="ae-area-scene" title="Сцена"><strong>Сцена</strong></div>').appendTo(place);
-            this.scene.css({
-                top: this.top,
-                left: this.left,
-                height: this.height,
-                width: this.width
-            }).resizable({
-                    autoHide: true,
-                    stop: function () {
-                        self._updateSize();
-                    }
-                }).draggable({
-                    containment: 'parent',
-                    drag: function (e, info) {
-                        self.updatePos(self,info.position,self.scenePolygon);
-                    }
-                });
-        },
         setScale: function (scale) {
-            this.sectors.forEach(function (s) {
+            this.intersects.forEach(function (s) {
                 s.setScale(scale);
             });
-            this.scene.css({
-                top: this.top * scale,
-                left: this.left * scale,
-                height: this.height * scale,
-                width: this.width * scale
-            });
+            var left = this.scroll.scrollLeft() / this.scale,
+                top = this.scroll.scrollTop() / this.scale;
+            this.place.height(this.height * scale);
+            this.place.width(this.width * scale);
+            this.scroll.scrollLeft(left * scale);
+            this.scroll.scrollTop(top * scale);
             this.scale = scale;
-        },
-        _updatePos: function (info) {
-            var from = info.position,
-                newTop = Math.round(from.top / this.scale),
-                newLeft = Math.round(from.left / this.scale);
-            this.scenePolygon.setRectangle(newLeft, newTop, this.width, this.height);
-            if (!this.isIntersect(this.scenePolygon)) {
-                this.top = newTop;
-                this.left = newLeft;
-                return;
-            }
-
-            newLeft = newLeft - this.left;
-            newLeft = this.left + (newLeft != 0 ? newLeft / Math.abs(newLeft) : 0);
-            newTop = newTop - this.top;
-            newTop = this.top + (newTop != 0 ? newTop / Math.abs(newTop) : 0);
-
-            this.scenePolygon.moveTo(newLeft, newTop);
-            if (!this.isIntersect(this.scenePolygon)) {
-                from.top = newTop * this.scale;
-                from.left = newLeft * this.scale;
-                this.top = newTop;
-                this.left = newLeft;
-                return;
-            }
-
-            if (newLeft != this.left) {
-                this.scenePolygon.moveTo(newLeft, this.top);
-                if (!this.isIntersect(this.scenePolygon)) {
-                    from.top = this.top * this.scale;
-                    from.left = newLeft * this.scale;
-                    this.left = newLeft;
-                    return;
-                }
-            }
-
-            if (newTop != this.top) {
-                this.scenePolygon.moveTo(this.left, newTop);
-                if (!this.isIntersect(this.scenePolygon)) {
-                    this.top = newTop;
-                    from.top = newTop * this.scale;
-                    from.left = this.left * this.scale;
-                    return;
-                }
-            }
-
-            this.scenePolygon.setRectangle(this.left, this.top, this.width, this.height);
-            from.top = this.top * this.scale;
-            from.left = this.left * this.scale;
-        },
-        _updateSize: function () {
-            var height = Math.round(this.scene.height() / this.scale),
-                width = Math.round(this.scene.width() / this.scale);
-            this.scenePolygon.setRectangle(this.left, this.top, width, height);
-            if (this.isIntersect(this.scenePolygon)) {
-                this.scenePolygon.setRectangle(this.left, this.top, this.width, this.height);
-                this.scene.css({
-                    height: this.height * this.scale,
-                    width: this.width * this.scale
-                });
-            } else {
-                this.height = height;
-                this.width = width;
-            }
         },
         json: function () {
             var sectors = [];
@@ -578,26 +608,12 @@ var App = App || {};
             return {
                 id: this.id,
                 name: this.name,
-                top: this.top,
-                left: this.left,
-                height: this.height,
-                width: this.width,
+                top: this.scene.top,
+                left: this.scene.left,
+                height: this.scene.height,
+                width: this.scene.width,
                 sectors: sectors
             };
-        }
-    }
-
-    function addPlace(a1, a2) {
-        return {
-            top: a1.top + a2.top,
-            left: a1.left + a2.left
-        }
-    }
-
-    function minusPlace(a1, a2) {
-        return {
-            top: a1.top - a2.top,
-            left: a1.left - a2.left
         }
     }
 
@@ -613,9 +629,10 @@ var App = App || {};
                 App.sectorEditor.load(null, Editor._newSector);
             });
             var tmp = place.find("#ae-area-view");
-            tmp.resizable();
-            tmp.height(window.innerHeight - 60);
+            tmp.resizable({handles:'s'});
+            tmp.height(window.innerHeight - 70);
             var view = place.find('#ae-sectors-holder');
+            this.scroll = place.find('#ae-area-view-scroller');
             this.view = view;
             this.height = view.height();
             this.width = view.width();
@@ -648,17 +665,17 @@ var App = App || {};
                 }
             }
             Editor.area.setScale(Editor.scale);
-            Editor.view.height(this.height * Editor.scale);
-            Editor.view.width(this.width * Editor.scale);
+//            Editor.view.height((Editor.height * Editor.scale));
+//            Editor.view.width((Editor.width * Editor.scale));
         },
         load: function (a) {
-            var area = new Area(a, Editor.view);
-            area.appendScene(Editor.view);
+            var area = new Area(a, Editor.view, Editor.scroll);
             area.sectors.forEach(function (s) {
                 Editor._addSector(s);
             });
             this.nameForm.val(area.name);
             this.area = area;
+
         },
         json: function () {
             return JSON.stringify(this.area.json());
@@ -686,7 +703,9 @@ var App = App || {};
         _newSector: function (json) {
             Editor.place.show();
             if (json != null) {
-                Editor.editSector = new Sector(json, Editor.view, Editor.area, Editor.scale);
+                json.top = Math.round(Editor.area.height / 2);
+                json.left = Math.round(Editor.area.width / 2);
+                Editor.editSector = new Sector(json, Editor.area);
                 Editor.editSector.setVisibleTitle(Editor.isVisibleTitle);
                 Editor._addSector(Editor.editSector);
                 Editor.area.addSector(Editor.editSector); //TODO изменить
@@ -696,4 +715,7 @@ var App = App || {};
 
     App.areaEditor = Editor;
 
-}(jQuery));
+}
+    (jQuery)
+    )
+;
