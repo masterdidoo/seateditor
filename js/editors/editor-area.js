@@ -493,10 +493,10 @@ var App = App || {};
             };
             this.place.height(this.height);
             this.place.width(this.width);
-            this.setStart(10000 - this.min.X, 10000 - this.min.Y);
+            this.setStart((this.width - width) / 2 - this.min.X, (this.height - height) / 2 - this.min.Y);
             var scroll = this.scroll;
-            scroll.scrollLeft(10000 + (width - this.screen.width)/ 2 );
-            scroll.scrollTop(10000 + (height - this.screen.height) / 2);
+            scroll.scrollLeft((this.width - this.screen.width) / 2);
+            scroll.scrollTop((this.height - this.screen.height) / 2);
         },
         setStart: function (x, y) {
             this.start.X = x;
@@ -589,12 +589,12 @@ var App = App || {};
             this.intersects.forEach(function (s) {
                 s.setScale(scale);
             });
-            var left = this.scroll.scrollLeft() / this.scale,
-                top = this.scroll.scrollTop() / this.scale;
+            var left = (this.scroll.scrollLeft() + this.screen.width / 2) / this.scale,
+                top = (this.scroll.scrollTop() + this.screen.height / 2) / this.scale;
             this.place.height(this.height * scale);
             this.place.width(this.width * scale);
-            this.scroll.scrollLeft(left * scale);
-            this.scroll.scrollTop(top * scale);
+            this.scroll.scrollLeft(left * scale - this.screen.width / 2);
+            this.scroll.scrollTop(top * scale - this.screen.height / 2);
             this.scale = scale;
         },
         json: function () {
@@ -629,7 +629,7 @@ var App = App || {};
                 App.sectorEditor.load(null, Editor._newSector);
             });
             var tmp = place.find("#ae-area-view");
-            tmp.resizable({handles:'s'});
+            tmp.resizable({handles: 's'});
             tmp.height(window.innerHeight - 70);
             var view = place.find('#ae-sectors-holder');
             this.scroll = place.find('#ae-area-view-scroller');
@@ -677,8 +677,23 @@ var App = App || {};
             this.area = area;
 
         },
+        sector_id:1,
+        row_id:1,
+        pl_id:1,
         json: function () {
-            return JSON.stringify(this.area.json());
+            var json = this.area.json();
+//            var self = this;
+//            json.sectors.forEach(function (sector) {
+//                sector.id = self.sector_id++;
+//                sector.placeRows.forEach(function (row) {
+//                    row.id = self.row_id++;
+//                    row.places.forEach(function (pl) {
+//                        pl.id = self.pl_id++;
+//                    });
+//                });
+//            });
+
+            return JSON.stringify(json);
         },
         _addSector: function (s) {
             Editor.list.append(
