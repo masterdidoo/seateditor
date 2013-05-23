@@ -87,12 +87,13 @@ var App = App || {};
     }
 
     PlaceRow.prototype = {
-        set: function ($data, $minPos) {
-            this.shift = $data.shift == null ? 0 : $data.shift;
-            this.name = $data.name;
+        set: function (data, minPos) {
+            this.shift = data.shift == null ? 0 : data.shift;
+            this.name = data.name;
+            this.namePlace.val(data.name)
             var self = this;
-            $data.places.forEach(function (p) {
-                self.places[parseInt(p.pos) - $minPos].set(p);
+            data.places.forEach(function (p) {
+                self.places[parseInt(p.pos) - minPos].set(p);
             });
         },
         init: function (self) {
@@ -435,7 +436,7 @@ var App = App || {};
             );
             place.append(' ');
             place.append(
-                $('<button class="btn"><i class="ui-icon-cancel"></i> Отмена</button>')
+                $('<button class="btn"><i class="icon-remove"></i> Отмена</button>')
                     .on('click', function () {
                         place.hide();
                         self.callback(null);

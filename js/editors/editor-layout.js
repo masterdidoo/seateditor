@@ -10,6 +10,7 @@ var App = App || {};
         this.top = 0;
         this.left = 0;
         this._start = {X: 0, Y: 0};
+        this.isTitleVisible = true;
         this.init(a.place);
         this.set(s);
     }
@@ -23,39 +24,21 @@ var App = App || {};
             this._dragHandler = $('<div class="ea-sector-drag-handler">').appendTo(this._rotator);
             this._body = $('<div class="ea-sector-body">').appendTo(this._dragHandler);
             this._title = $('<div class="ea-sector-title">').appendTo(this._dragHandler);
-            this.jq.draggable({
-                containment: place,
-                handle: this._dragHandler,
-                drag: function (event, info) {
-                    return self.area.updatePos(self, info.position, self.polygon);
-                }
-            });
-            this._rotator.rotatable({
-                stop: function (a) {
-                    var polygon = self.polygon.clone();
-                    self.polygon.rotate(a - self.rotate);
-                    if (self.area.isIntersect(self.polygon)) {
-                        self.polygon = polygon;
-                        self._rotator.rotate(self.rotate);
-                    } else {
-                        self.rotate = a;
-
-                        //TODO debug
-                        self.debug = Debug.debugPoly(self.polygon, self.debug);
-                    }
-                }
-            });
         },
         setScale: function (scale) {
             this.scale = scale;
             this.render();
         },
         setVisibleTitle: function (visible) {
+            this.isTitleVisible = visible;
             if (visible) {
                 this._title.show();
             } else {
                 this._title.hide();
             }
+        },
+        dbClick: function(callback) {
+            this._dragHandler.on('dblclick',callback);
         },
         _createTitle: function (width) {
             var n = this.name;
@@ -95,24 +78,24 @@ var App = App || {};
                 left: (this.left * this.scale)
             });
             var body = this._body.empty();
-            this._rotator.rotate(this.rotate);
             this._rotator.css({
                 top: -this._height * size / 2,
                 left: -this._width * size / 2,
                 width: this._width * size,
-                height: this._height * size
+                height: this._height * size,
+                transform: "rotate(" + this.rotate + "deg)"
             });
             this._dragHandler.attr('title', this.name);
             this._createTitle(this._width * size);
             this.places.forEach(function (e) {
-                var left = e[1] * size;
-                if (e[2] > 0) {
+                var left = e.col * size;
+                if (e.shift > 0) {
                     left += size / 2;
-                } else if (e[2] < 0) {
+                } else if (e.shift < 0) {
                     left -= size / 2;
                 }
-                $('<div>').css({
-                    top: e[0] * size,
+                $('<div>').attr('class', 'z' + e.zone).css({
+                    top: e.row * size,
                     left: left,
                     height: size - 1,
                     width: size - 1
@@ -163,9 +146,11 @@ var App = App || {};
                 var row = parseInt(r.pos) - rowPos.min;
                 if (r.places instanceof Array) {
                     r.places.forEach(function (p) {
-                        var col = parseInt(p.pos) - placePos.min;
-                        self.places.push([row, col, r.shift]);
-                        self.polygon.addPlace(col, row, self.size, r.shift);
+                        p.col = parseInt(p.pos) - placePos.min;
+                        p.shift = r.shift;
+                        p.row = row;
+                        self.places.push(p);
+                        self.polygon.addPlace(p.col, row, self.size, r.shift);
                     });
                 }
             });
@@ -174,7 +159,11 @@ var App = App || {};
             }
             self.debug = Debug.debugPoly(this.polygon);
             self.polygon.moveTo(this.left, this.top);
-            this.render();
+        },
+        getPlaces: function (places) {
+            this.places.forEach(function (p) {
+                places[p.id] = p;
+            });
         },
         json: function () {
             return {
@@ -400,17 +389,7 @@ var App = App || {};
             left: (this.left) * this.scale,
             height: this.height * this.scale - 1,
             width: this.width * this.scale - 1
-        }).resizable({
-                autoHide: true,
-                stop: function () {
-                    self._updateSize();
-                }
-            }).draggable({
-                containment: 'parent',
-                drag: function (e, info) {
-                    return self.area.updatePos(self, info.position, self.polygon);
-                }
-            });
+        });
     }
 
     Scene.prototype = {
@@ -433,21 +412,6 @@ var App = App || {};
                 width: (this.width * this.scale) - 1
             });
         },
-        _updateSize: function () {
-            var height = Math.round(this.jq.height() / this.scale),
-                width = Math.round(this.jq.width() / this.scale);
-            this.polygon.setRectangle(this.left, this.top, width, height);
-            if (this.area.isIntersect(this.polygon)) {
-                this.polygon.setRectangle(this.left, this.top, this.width, this.height);
-                this.jq.css({
-                    height: (this.height * this.scale),
-                    width: (this.width * this.scale)
-                });
-            } else {
-                this.height = height;
-                this.width = width;
-            }
-        },
         setScale: function (scale) {
             this.scale = scale;
             this.render();
@@ -461,6 +425,7 @@ var App = App || {};
         this.name = a.name;
         this.sectors = [];
         this.intersects = [];
+        this.places = {};
         this.scale = 1;
         this.start = {X: 0, Y: 0};
         this.init(a);
@@ -482,12 +447,12 @@ var App = App || {};
             var width = this.max.X - this.min.X,
                 height = this.max.Y - this.min.Y;
 
-            this.height = height + 20000;
-            this.width = width + 20000;
             this.screen = {
                 height: this.place.height(),
                 width: this.place.width()
             };
+            this.height = height < this.screen.height ? this.screen.height : height;
+            this.width = width < this.screen.width ? this.screen.width : width;
             this.place.height(this.height);
             this.place.width(this.width);
             this.setStart((this.width - width) / 2 - this.min.X, (this.height - height) / 2 - this.min.Y);
@@ -507,80 +472,7 @@ var App = App || {};
             comparePoint(sector.polygon.getMinMaxXY(), this.min, this.max);
             this.sectors.push(sector);
             this.intersects.push(sector);
-        },
-        updatePos: function (from, to, polygon) {
-
-            /*
-             if (to.left < 10) {
-             to.left += this.width;
-             this.setStart(this.start.X + this.width, this.start.Y);
-             this.place.width(this.width * 2);
-             this.scroll.scrollLeft(this.width);
-             this.width += this.width;
-             return false
-             }
-             if (to.top < 10) {
-             to.top += this.height;
-             this.place.height(this.height * 2);
-             this.scroll.scrollTop(this.height);
-             this.setStart(this.start.X, this.start.Y + this.height);
-             this.height += this.height;
-             return false
-             }
-             */
-
-//            var start = new Date();
-            var self = this,
-                newY = Math.round(to.top / this.scale),
-                newX = Math.round(to.left / this.scale);
-            polygon.moveTo(newX, newY);
-            if (!this.isIntersect(polygon)) {
-                from.left = newX;
-                from.top = newY;
-                return true;
-            }
-//            console.log(start.toLocaleTimeString()+' in '+from.name);
-            to.top = (from.top * this.scale);
-            to.left = (from.left * this.scale);
-
-            function _step(x, y) {
-                polygon.moveTo(x, y);
-                if (!self.isIntersect(polygon)) {
-                    to.left = (x * self.scale);
-                    to.top = (y * self.scale);
-                    from.left = x;
-                    from.top = y;
-                    return true;
-                }
-                return false;
-            }
-
-            var next = true;
-            while (next) {
-                var dX = newX - from.left,
-                    x = from.left + (dX != 0 ? dX / Math.abs(dX) : 0),
-                    dY = newY - from.top,
-                    y = from.top + (dY != 0 ? dY / Math.abs(dY) : 0);
-                next = Math.abs(dX) >= 1 && Math.abs(dY) >= 1 && _step(x, y)
-                    || Math.abs(dX) >= 1 && _step(x, from.top)
-                    || Math.abs(dY) >= 1 && _step(from.left, y);
-            }
-
-            polygon.moveTo(from.left, from.top);
-//            console.log((new Date()).toLocaleTimeString()+' out '+from.name +' '+(start - (new Date())));
-            return true;
-        },
-        isIntersect: function (polygon) {
-            Debug.debugArea(this);
-            var polygons = this.intersects;
-            for (var i = 0; polygons.length > i; i++) {
-                if (polygons[i].polygon != polygon) {
-                    if (polygon.isIntersect(polygons[i].polygon)) {
-                        return true;
-                    }
-                }
-            }
-            return false;
+            sector.getPlaces(this.places);
         },
         setScale: function (scale) {
             this.intersects.forEach(function (s) {
@@ -616,9 +508,10 @@ var App = App || {};
 
     var Editor = {
         scale: 1,
-        isVisibleTitle: true,
+        isVisibleTitle: false,
         init: function (place) {
             this.place = place;
+            this.zoneStyle = $('#la-zone-style');
             this.list = place.find('#ae-sectors-list');
             this.nameForm = place.find('#ae-name-form');
             place.find("#ae-add-sector").on('click', function () {
@@ -626,9 +519,8 @@ var App = App || {};
                 App.sectorEditor.load(null, Editor._newSector);
             });
             var tmp = place.find("#ae-area-view");
-            tmp.resizable({handles: 's'});
             tmp.height(window.innerHeight - 70);
-            var view = place.find('#ae-sectors-holder');
+            var view = place.find('#la-sectors-holder');
             this.scroll = place.find('#ae-area-view-scroller');
             this.view = view;
             this.height = view.height();
@@ -662,55 +554,47 @@ var App = App || {};
                 }
             }
             Editor.area.setScale(Editor.scale);
-//            Editor.view.height((Editor.height * Editor.scale));
-//            Editor.view.width((Editor.width * Editor.scale));
         },
         load: function (a) {
+            Editor.zoneStyle.empty();
+            a.layout.zones.forEach(function (z) {
+                Editor.zoneStyle.append('.ea-sector-body div.z' + z.id + ' {background-color: ' + z.color + ';}')
+            });
+            App.layoutSectorEditor.setZones(a.layout.zones);
             var area = new Area(a, Editor.view, Editor.scroll);
             area.sectors.forEach(function (s) {
                 Editor._addSector(s);
             });
-            this.nameForm.val(area.name);
+            this.nameForm.val(a.layout.name);
             this.area = area;
-
         },
         json: function () {
-            return JSON.stringify(this.area.json());
+            var json = this.area.json();
+            return JSON.stringify(json);
         },
         _addSector: function (s) {
+            var click = function () {
+                Editor.place.hide();
+                Editor.editSector = s;            //TODO изменить
+                App.layoutSectorEditor.load(s, Editor._saveSector);
+            };
+            s.dbClick(click);
+            s.setVisibleTitle(Editor.isVisibleTitle);
             Editor.list.append(
                 $('<li></li>').append(
-                    $('<a></a>').append(s.name).on('click', function () {
-                        Editor.place.hide();
-                        Editor.link = $(this);
-                        Editor.editSector = s;            //TODO изменить
-                        App.sectorEditor.load(s.json(), Editor._saveSector);
-                    })
+                    $('<a></a>').append(s.name).on('click', click)
                 )
             );
         },
         _saveSector: function (json) {
             Editor.place.show();
             if (json != null) {
-                var s = Editor.editSector;
-                s.set(json);
-                Editor.link.text(s.name);
-            }
-        },
-        _newSector: function (json) {
-            Editor.place.show();
-            if (json != null) {
-                json.top = Math.round(Editor.area.height / 2);
-                json.left = Math.round(Editor.area.width / 2);
-                Editor.editSector = new Sector(json, Editor.area);
-                Editor.editSector.setVisibleTitle(Editor.isVisibleTitle);
-                Editor._addSector(Editor.editSector);
-                Editor.area.addSector(Editor.editSector); //TODO изменить
+                Editor.editSector.set(json);
             }
         }
     }
 
-    App.areaEditor = Editor;
+    App.layoutEditor = Editor;
 
 }
     (jQuery)
