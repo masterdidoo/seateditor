@@ -9,7 +9,7 @@
     margin-top: 10px;
     padding: 10px;
     border: 1px solid #000;
-    overflow: auto;
+    /*overflow: auto;*/
 }
 
 div.ui-rotatable-handle {
@@ -191,4 +191,11 @@ div.ea-sector-title {
 
 .la-sector-edit .ea-sector-body div.ui-selected {
     background-color: greenyellow;
+}
+
+.ea-sector-zones div {
+    height: 14px;
+    width: 14px;
+    float: left;
+    margin: 3px 10px 0 0;
 }

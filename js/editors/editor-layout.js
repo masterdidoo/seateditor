@@ -37,8 +37,8 @@ var App = App || {};
                 this._title.hide();
             }
         },
-        dbClick: function(callback) {
-            this._dragHandler.on('dblclick',callback);
+        dbClick: function (callback) {
+            this._dragHandler.on('dblclick', callback);
         },
         _createTitle: function (width) {
             var n = this.name;
@@ -157,7 +157,6 @@ var App = App || {};
             if (this.rotate != null) {
                 self.polygon.rotate(this.rotate);
             }
-            self.debug = Debug.debugPoly(this.polygon);
             self.polygon.moveTo(this.left, this.top);
         },
         getPlaces: function (places) {
@@ -191,70 +190,6 @@ var App = App || {};
                 min.Y = p.Y;
             }
         });
-    }
-
-    var Debug = {
-        isDisabled: true,
-        log: function (m) {
-            if (this.isDisabled) return;
-            console.log(m);
-        },
-        debug: function (p, m) {
-            if (this.isDisabled) return;
-            var out = '';
-            p.forEach(function (polygon) {
-                out += '\n';
-                polygon.forEach(function (s) {
-                    out += '[' + s.X + ',' + s.Y + '] '
-                })
-            })
-            console.debug(out + ' : ' + m);
-        },
-
-        // converts polygons to SVG path string
-        polys2path: function (poly, scale) {
-            if (this.isDisabled) return;
-            var path = "", i, j;
-            if (!scale) scale = 1;
-            for (i = 0; i < poly.length; i++) {
-                for (j = 0; j < poly[i].length; j++) {
-                    if (!j) path += "M";
-                    else path += "L";
-                    path += (poly[i][j].X / scale) + ", " + (poly[i][j].Y / scale);
-                }
-                path += "Z";
-            }
-            return path;
-        },
-
-        debugPoly: function (p, d) {
-            if (this.isDisabled) return;
-            var polygon = p.clone();
-            polygon.moveTo(160 / 2, 160 / 2);
-            var svg = '<svg style="margin-top:10px; margin-right:10px;margin-bottom:10px;background-color:#dddddd;" width="160" height="160">'
-                + '<path stroke="black" fill="green" stroke-width="0" d="' + Debug.polys2path(polygon.polygons, 1) + '"/>'
-                + '</svg>';
-            var div = d;
-            if (div == null) {
-                div = $('<div style="float: left"></div>');
-                $('#svg').append(div);
-            }
-            div.html(svg);
-            return div;
-        },
-
-        debugArea: function (a) {
-            if (this.isDisabled) return;
-            var paths = '';
-            a.intersects.forEach(function (p) {
-                paths += '<path stroke="black" fill="green" stroke-width="0" d="' + Debug.polys2path(p.polygon.polygons, 1) + '"/>'
-
-            });
-            var svg = '<svg style="margin-top:10px; margin-right:10px;margin-bottom:10px;background-color:#dddddd;" width="1280" height="600">'
-                + paths
-                + '</svg>';
-            $('#svgarea').html(svg);
-        }
     }
 
     function Polygon(x, y) {
@@ -506,6 +441,44 @@ var App = App || {};
         }
     }
 
+    function Layout(a, area, style) {
+        this.id = a.layout.id;
+        this.name = a.layout.name;
+        this.zones = a.layout.zones;
+        this.area = area;
+        this.zoneStyle = style;
+        this.init();
+    }
+
+    Layout.prototype = {
+        init: function() {
+            var zoneStyle = this.zoneStyle;
+            zoneStyle.empty();
+            this.zones.forEach(function (z) {
+                zoneStyle.append('.ea-sector-body div.z' + z.id + ' {background-color: #' + z.color + ';}')
+            });
+        },
+        json: function () {
+            var zones = {};
+            this.zones.forEach(function (z) {
+                z.places = [];
+                zones[z.id] = z;
+            });
+
+            this.area.sectors.forEach(function (s) {
+                s.places.forEach(function (p) {
+                    if (zones[p.zone] != null) zones[p.zone].places.push(p.id);
+                });
+            });
+            return {
+                id: this.id,
+                name: this.name,
+                area_scheme_id: this.area.id,
+                zones: this.zones
+            };
+        }
+    }
+
     var Editor = {
         scale: 1,
         isVisibleTitle: false,
@@ -514,6 +487,9 @@ var App = App || {};
             this.zoneStyle = $('#la-zone-style');
             this.list = place.find('#ae-sectors-list');
             this.nameForm = place.find('#ae-name-form');
+            this.nameForm.on('change', function () {
+                Editor.layout.name = this.value;
+            });
             place.find("#ae-add-sector").on('click', function () {
                 Editor.place.hide();
                 App.sectorEditor.load(null, Editor._newSector);
@@ -556,26 +532,23 @@ var App = App || {};
             Editor.area.setScale(Editor.scale);
         },
         load: function (a) {
-            Editor.zoneStyle.empty();
-            a.layout.zones.forEach(function (z) {
-                Editor.zoneStyle.append('.ea-sector-body div.z' + z.id + ' {background-color: ' + z.color + ';}')
-            });
-            App.layoutSectorEditor.setZones(a.layout.zones);
             var area = new Area(a, Editor.view, Editor.scroll);
+            var layout = new Layout(a, area, Editor.zoneStyle);
             area.sectors.forEach(function (s) {
                 Editor._addSector(s);
             });
-            this.nameForm.val(a.layout.name);
+            this.nameForm.val(layout.name);
             this.area = area;
+            this.layout = layout;
+            App.layoutSectorEditor.setZones(layout.zones);
         },
         json: function () {
-            var json = this.area.json();
+            var json = this.layout.json();
             return JSON.stringify(json);
         },
         _addSector: function (s) {
             var click = function () {
                 Editor.place.hide();
-                Editor.editSector = s;            //TODO изменить
                 App.layoutSectorEditor.load(s, Editor._saveSector);
             };
             s.dbClick(click);
@@ -586,11 +559,8 @@ var App = App || {};
                 )
             );
         },
-        _saveSector: function (json) {
+        _saveSector: function () {
             Editor.place.show();
-            if (json != null) {
-                Editor.editSector.set(json);
-            }
         }
     }
 

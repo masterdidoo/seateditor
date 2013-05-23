@@ -28,23 +28,24 @@ var App = App || {};
             return rez;
         },
         setZones: function (zones) {
-            this._zones.html(
-                zones.reduce(function (html, z) {
-                    return html + '<option value="' + z.id + '">' + z.name + '</option>';
-                }, '')
-            );
-            this.zone = zones[0].id;
-            this.zoneClass = 'z' + zones[0].id;
+            var self = this;
+            zones.forEach(function (z) {
+                self._zoneSelector.append(
+                    $('<li><a tabindex="-1" href="#"><div class="z' + z.id + '"></div> ' + z.name + '</a></li>')
+                        .data('zone',z)
+                        .on('click', self._onSelectZone)
+                );
+            });
+            this._setCurZone(zones[0]);
         },
-        load: function (data, callback) {
-            this.data = data;
-            this.callback = callback;
-            this.view.html(this.createBody(data));
-            this.place.show();
-        },
+        _setCurZone: function(z) {
+            this._zoneName.html('<div class="z' + z.id + '"></div> ' + z.name);
+            this.zone = z.id;
+            this.zoneClass = 'z' + z.id;
+        }   ,
         _onSelectZone: function (e) {
-            self.zone = this.value;
-            self.zoneClass = 'z' + this.value;
+            self._setCurZone($(this).data('zone'));
+            self._zoneSelector.hide();
         },
         _onStopSelect: function (e, u) {
             u.selected.className = self.zoneClass;
@@ -58,7 +59,13 @@ var App = App || {};
                 }
             });
             self.data.render();
-            self.callback(null);
+            self.callback();
+        },
+        load: function (data, callback) {
+            this.data = data;
+            this.callback = callback;
+            this.view.html(this.createBody(data));
+            this.place.show();
         },
         init: function (place) {
             this.place = place;
@@ -70,8 +77,8 @@ var App = App || {};
             });
             place.find('#la-sector-view').append(this.view);
 
-            this._zones = $('<select></select>').on('change', this._onSelectZone);
-            place.find('#la-sector-zones').append(this._zones);
+            this._zoneSelector = $('#la-zone-selector');
+            this._zoneName = $('#la-sector-zone-name').on('click', function(){self._zoneSelector.show()}).find('p');
 
             place.find('#la-sector-buttons')
                 .append(
@@ -83,7 +90,7 @@ var App = App || {};
                     $('<button class="btn"><i class="icon-remove"></i> Отмена</button>')
                         .on('click', function () {
                             place.hide();
-                            self.callback(null);
+                            self.callback();
                         })
                 );
         }
